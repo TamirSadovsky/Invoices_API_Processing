@@ -26,15 +26,15 @@ AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT")
 AZURE_KEY = os.getenv("AZURE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-try:
-    azure_client = DocumentAnalysisClient(
-        endpoint=AZURE_ENDPOINT, credential=AzureKeyCredential(AZURE_KEY)
-    )
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
-except Exception as e:
-    print(
-        f"⚠️ Warning: API clients not initialized properly. Missing environment variables? Error: {e}"
-    )
+# בדיקה מוקדמת כדי לזהות שגיאות מיד בעליית השרת ולא רק בשליחת בקשה
+if not all([AZURE_ENDPOINT, AZURE_KEY, OPENAI_API_KEY]):
+    print("❌ CRITICAL ERROR: Missing environment variables! Check Railway settings.")
+
+# הגדרה ישירה של ה-clients - ללא try/except, כך שיהיו מוגדרים גלובלית
+azure_client = DocumentAnalysisClient(
+    endpoint=AZURE_ENDPOINT, credential=AzureKeyCredential(AZURE_KEY)
+)
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 def convert_pdf_to_base64_images(file_path):
