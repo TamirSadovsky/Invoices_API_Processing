@@ -87,33 +87,39 @@ def analyze_israeli_invoice(file_path):
     - USE THE RAW OCR TEXT as your single source of truth for exact spelling, long ID numbers (ח.פ/ע.מ), invoice numbers, and accurate digits to prevent visual hallucinations.
     
     CRITICAL LOGICAL RULES FOR ISRAELI INVOICES:
-    1. Customer Name: MUST contain letters. Look near words like "לכבוד". Ignore random numbers near it.
+    1. Vendor (Supplier) Details: Look at the top of the page. 
+       - Extract the 'vendor_name' by looking at the visual logo OR the largest text at the top. Cross-reference the image and OCR for exact spelling.
+       - Extract the 'vendor_hp' (Vendor Tax ID), which is a 9-digit number usually near the top, often labeled as "ח.פ" or "ע.מ". Do NOT confuse it with the Customer's HP.
+
+    2. Customer Name: MUST contain letters. Look near words like "לכבוד". Ignore random numbers near it.
     
-    1.a. Customer HP / Tax ID: The 'customer_hp' is the 9-digit Israeli company/dealer number of the BUYER. 
+    2.a. Customer HP / Tax ID: The 'customer_hp' is the 9-digit Israeli company/dealer number of the BUYER. 
          - Look for it near the customer's name, OR anywhere else in the document labeled as "ח.פ", "ע.מ", "מס. חברה לקוח", or "תיק מע\"מ לקוח".
-         - CRITICAL: Do NOT confuse the customer's HP with the Vendor's HP (the seller's ID, which usually appears at the very top of the page).
+         - CRITICAL: Do NOT confuse the customer's HP with the Vendor's HP.
     
-    2. STRICT ROW ALIGNMENT & VALUE PAIRING: Ensure price, description, and quantity actually belong to THAT exact physical row in the image. Do NOT shift prices! Do NOT mistake the invoice's overall Subtotal (סה"כ) for the price of an item!
+    3. STRICT ROW ALIGNMENT & VALUE PAIRING: Ensure price, description, and quantity actually belong to THAT exact physical row in the image. Do NOT shift prices! Do NOT mistake the invoice's overall Subtotal (סה"כ) for the price of an item!
        
-    3. Global vs. Line Item Discount: Line Discount maps to `discount_amount` in the items array. Global Discount (bottom of invoice) maps ONLY to `total_discount` in the summary. NEVER inject global discounts into individual items.
+    4. Global vs. Line Item Discount: Line Discount maps to `discount_amount` in the items array. Global Discount (bottom of invoice) maps ONLY to `total_discount` in the summary. NEVER inject global discounts into individual items.
        
-    4. Mathematical Verification: 
+    5. Mathematical Verification: 
        - Row Level: Quantity * (Unit Price Before Discount - Discount Amount) MUST equal the Line Total.
        - Summary Level: Subtotal Before Discount - Total Discount + Tax Amount MUST equal Total Including Tax.
        
-    5. Row Order: Output the `items` array ordered logically from top to bottom based on the IMAGE.
+    6. Row Order: Output the `items` array ordered logically from top to bottom based on the IMAGE.
     
-    6. Allocation Number: If 'allocation_number' (הקצאה / קמאה) exists, it is a 9+ digit number.
+    7. Allocation Number: If 'allocation_number' (הקצאה / קמאה) exists, it is a 9+ digit number.
     
-    7. ZERO-VALUE ITEMS: Extract EVERY single line item present in the table. Do not skip items even if their price is 0.00.
+    8. ZERO-VALUE ITEMS: Extract EVERY single line item present in the table. Do not skip items even if their price is 0.00.
     
-    8. DYNAMIC EXTRA COLUMNS: Extract extra columns into the `extra_columns` object (e.g. "ת.מ" -> "delivery_note", "רכב" -> "vehicle_number").
+    9. DYNAMIC EXTRA COLUMNS: Extract extra columns into the `extra_columns` object (e.g. "ת.מ" -> "delivery_note", "רכב" -> "vehicle_number").
        
-    9. DATE PARSING: Format as YYYY-MM-DD. "26" as a year means 2026.
+    10. DATE PARSING: Format as YYYY-MM-DD. "26" as a year means 2026.
     
     You MUST return ONLY a valid JSON object matching this exact structure:
     {
         "header": {
+            "vendor_name": string or null,
+            "vendor_hp": string or null,
             "customer_name": string or null,
             "customer_hp": string or null,
             "invoice_number": string or null,
